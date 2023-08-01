@@ -1,107 +1,130 @@
-'use client';
+'use client'
+import React from 'react'
 
 import Head from 'next/head'
 // import { Inter } from 'next/font/google'
 import styles from '../../styles/Home.module.css'
-import { ApiPromise, WsProvider } from '@polkadot/api';
-import { ContractPromise } from '@polkadot/api-contract';
-import { web3Accounts, web3Enable } from '@polkadot/extension-dapp';
-import { InjectedAccountWithMeta } from "@polkadot/extension-inject/types";
-import { BN, BN_ONE } from "@polkadot/util";
+import { ApiPromise, WsProvider } from '@polkadot/api'
+import { ContractPromise } from '@polkadot/api-contract'
+import { web3Accounts, web3Enable, web3FromSource } from '@polkadot/extension-dapp'
+import { InjectedAccountWithMeta } from '@polkadot/extension-inject/types'
+import { BN, BN_ONE } from '@polkadot/util'
 import type { WeightV2 } from '@polkadot/types/interfaces'
 import '@polkadot/api-augment'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 // import metadata from "./metadata.json";
-import metadata from "../../../contracts/flipper_test/contracts/flipper/target/ink/flipper.json";
+import metadata from '../../../contracts/flipper_test/contracts/flipper/target/ink/flipper.json'
 
 type HumanOutput = {
-  Ok?: boolean;
-  [key: string]: any;
-};
+  Ok?: boolean
+  [key: string]: any
+}
 
-const ALICE = ""
+const ALICE = ''
 
-const MAX_CALL_WEIGHT = new BN(5_000_000_000_000).isub(BN_ONE);
-const PROOFSIZE = new BN(1_000_000);
-const storageDepositLimit = null;
-
+const MAX_CALL_WEIGHT = new BN(5_000_000_000_000).isub(BN_ONE)
+const PROOFSIZE = new BN(1_000_000)
+const storageDepositLimit = null
 
 export default function Home() {
-  const [api, setApi] = useState<ApiPromise | null>(null);
-  const [contract, setContract] = useState<ContractPromise | null>(null);
-  const [bool, setBool] = useState<boolean | ''>('');
-  const [contractAddress, setContractAddress] = useState('');
-  const [getContractResult, setGetContractResult] = useState("");
-  const [address, setAddress] = useState("");
-  const [source, setSource] = useState("");
-  const [account, setAccount] = useState<InjectedAccountWithMeta | null>(null);
-  const [connected, setConnected] = useState(false);
+  const [api, setApi] = useState<ApiPromise | null>(null)
+  const [contract, setContract] = useState<ContractPromise | null>(null)
+  const [bool, setBool] = useState<boolean | ''>('')
+  const [contractAddress, setContractAddress] = useState('')
+  const [getContractResult, setGetContractResult] = useState('')
+  const [address, setAddress] = useState('')
+  const [source, setSource] = useState('')
+  const [account, setAccount] = useState<InjectedAccountWithMeta | null>(null)
+  const [connected, setConnected] = useState(false)
 
   async function connectWallet() {
+    const allInjected = await web3Enable('my dapp')
 
-      const allInjected = await web3Enable("my dapp");
+    if (allInjected.length === 0) {
+      return
+    }
+    const accounts = await web3Accounts()
 
-      if (allInjected.length === 0) {
-        return;
-      }
-      const accounts = await web3Accounts();
+    const account = accounts[0]
+    setAccount(account)
 
-      const account = accounts[0];
-      setAccount(account);
+    const address = account?.address
+    const source = account?.meta?.source
 
-      const address = account?.address;
-      const source = account?.meta?.source;
+    console.log('address', address)
+    console.log('source', source)
 
-      console.log("address", address);
-      console.log("source", source);
-
-      setAddress(address);
-      setSource(source);
-      setConnected(true);
-
+    setConnected(true)
   }
 
-  async function getContract () {
-    try{
+  async function getContract() {
+    try {
       // Initialise the provider to connect to the local node
-      const provider = new WsProvider('wss://rpc.shibuya.astar.network');
-        
-      const api = await ApiPromise.create({ provider});
-      setApi(api);
+      const provider = new WsProvider('wss://rpc.shibuya.astar.network')
+
+      const api = await ApiPromise.create({ provider })
+      setApi(api)
 
       const contract = new ContractPromise(api, metadata, contractAddress)
       setContract(contract)
-      console.log("contract", contract)
-      setGetContractResult("OK");
-    }catch (error) {
-      console.error(error);
+      console.log('contract', contract)
+      setGetContractResult('OK')
+    } catch (error) {
+      console.error(error)
       // If there's an error, set getContractResult to the error message
-      setGetContractResult("NG");
+      setGetContractResult('NG')
     }
-    
   }
-  async function getResult () {
-    if (contract !== null) {
+  async function getResult() {
+    if (contract !== null && account?.address !== null) {
 
-      const { output }  = await contract.query['get'](ALICE,
-        {
-          gasLimit: api?.registry.createType('WeightV2', {
-            refTime: MAX_CALL_WEIGHT,
-            proofSize: PROOFSIZE,
-          }) as WeightV2,
-          storageDepositLimit,
-        },)
+      const { output } = await contract.query['get'](account?.address, {
+        gasLimit: api?.registry.createType('WeightV2', {
+          refTime: MAX_CALL_WEIGHT,
+          proofSize: PROOFSIZE,
+        }) as WeightV2,
+        storageDepositLimit,
+      })
 
-        const humanOutput = output?.toHuman() as HumanOutput;
+      const humanOutput = output?.toHuman() as HumanOutput
 
-console.log("humanOutput", humanOutput)
+      console.log('humanOutput', humanOutput)
 
-if (humanOutput?.Ok !== undefined) {
-  setBool(humanOutput.Ok)
-}
-    
-      
+      if (humanOutput?.Ok !== undefined) {
+        setBool(humanOutput.Ok)
+      }
+    }
+  }
+  async function getResult2() {
+    if (contract !== null && account?.address !== null) {
+      const injector = await web3FromSource(account.meta.source);
+
+      await contract.tx['flip']({
+        gasLimit: api?.registry.createType('WeightV2', {
+          refTime: new BN(100_000_000_000),
+          proofSize: PROOFSIZE,
+        }) as WeightV2,
+        storageDepositLimit,
+      }).signAndSend(
+        account.address,
+        { signer: injector.signer },
+        async ({ status }) => {
+          if (status.isInBlock) {
+            console.log(
+              `Completed at block hash #${status.asInBlock.toString()}`
+            );
+          } else {
+            console.log(`Current status: ${status.type}`);
+            console.log(`Current status: ${status.hash.toString()}`);
+          }
+        }
+      )
+      .catch((error: any) => {
+        console.log(":( transaction failed", error);
+      });
+
+
     }
   }
 
@@ -114,23 +137,42 @@ if (humanOutput?.Ok !== undefined) {
         <link rel="icon" href="/favicon.ico" />
       </Head>
       <main className={styles.main}>
-        <h1 style={{marginBottom: "80px"}}>Get Your Contract Information(Flipper)</h1>
+        <h1 style={{ marginBottom: '80px' }}>
+          Get Your Contract Information(Flipper)
+        </h1>
         <div className={styles.description}>
-
-          
-          
           <div>
-            <button className={styles.rotatebutton} style={{ marginBottom: '20px' }} onClick={connectWallet}>
-              {connected ? "Connected" : "Connect Wallet"}
+            <button
+              className={styles.rotatebutton}
+              style={{ marginBottom: '20px' }}
+              onClick={connectWallet}
+            >
+              {connected ? 'Connected' : 'Connect Wallet'}
             </button>
-
-            contractAddress:<input  style={{width: "400px"}} type="text" value={contractAddress} onChange={(e) => setContractAddress(e.target.value)} />
-            <button className={styles.rotatebutton} onClick={getContract}>getContract</button>
-
-            {getContractResult && <p>Get Contract result: {getContractResult}</p>}
-            <button className={styles.rotatebutton} onClick={getResult}>get contract information</button>
-            <p style={{marginBottom: "20px"}}>Result: {bool.toString()}</p>
-
+            contractAddress:
+            <input
+              style={{ width: '400px' }}
+              type="text"
+              value={contractAddress}
+              onChange={(e) => setContractAddress(e.target.value)}
+            />
+            <button className={styles.rotatebutton} onClick={getContract}>
+              getContract
+            </button>
+            {getContractResult && (
+              <p>Get Contract result: {getContractResult}</p>
+            )}
+            <button className={styles.rotatebutton} onClick={getResult}>
+              get contract information
+            </button>
+            <p style={{ marginBottom: '20px' }}>Result: {bool.toString()}</p>
+            <button
+              className={styles.rotatebutton}
+              style={{ marginBottom: '20px' }}
+              onClick={getResult2}
+            >
+             aa
+            </button>
           </div>
         </div>
       </main>
