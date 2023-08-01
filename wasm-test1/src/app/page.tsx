@@ -6,7 +6,11 @@ import Head from 'next/head'
 import styles from '../../styles/Home.module.css'
 import { ApiPromise, WsProvider } from '@polkadot/api'
 import { ContractPromise } from '@polkadot/api-contract'
-import { web3Accounts, web3Enable, web3FromSource } from '@polkadot/extension-dapp'
+import {
+  web3Accounts,
+  web3Enable,
+  web3FromSource,
+} from '@polkadot/extension-dapp'
 import { InjectedAccountWithMeta } from '@polkadot/extension-inject/types'
 import { BN, BN_ONE } from '@polkadot/util'
 import type { WeightV2 } from '@polkadot/types/interfaces'
@@ -21,8 +25,6 @@ type HumanOutput = {
   [key: string]: any
 }
 
-const ALICE = ''
-
 const MAX_CALL_WEIGHT = new BN(5_000_000_000_000).isub(BN_ONE)
 const PROOFSIZE = new BN(1_000_000)
 const storageDepositLimit = null
@@ -33,8 +35,6 @@ export default function Home() {
   const [bool, setBool] = useState<boolean | ''>('')
   const [contractAddress, setContractAddress] = useState('')
   const [getContractResult, setGetContractResult] = useState('')
-  const [address, setAddress] = useState('')
-  const [source, setSource] = useState('')
   const [account, setAccount] = useState<InjectedAccountWithMeta | null>(null)
   const [connected, setConnected] = useState(false)
 
@@ -76,9 +76,8 @@ export default function Home() {
       setGetContractResult('NG')
     }
   }
-  async function getResult() {
+  async function get() {
     if (contract !== null && account?.address !== null) {
-
       const { output } = await contract.query['get'](account?.address, {
         gasLimit: api?.registry.createType('WeightV2', {
           refTime: MAX_CALL_WEIGHT,
@@ -96,9 +95,9 @@ export default function Home() {
       }
     }
   }
-  async function getResult2() {
+  async function flip() {
     if (contract !== null && account?.address !== null) {
-      const injector = await web3FromSource(account.meta.source);
+      const injector = await web3FromSource(account.meta.source)
 
       await contract.tx['flip']({
         gasLimit: api?.registry.createType('WeightV2', {
@@ -106,25 +105,24 @@ export default function Home() {
           proofSize: PROOFSIZE,
         }) as WeightV2,
         storageDepositLimit,
-      }).signAndSend(
-        account.address,
-        { signer: injector.signer },
-        async ({ status }) => {
-          if (status.isInBlock) {
-            console.log(
-              `Completed at block hash #${status.asInBlock.toString()}`
-            );
-          } else {
-            console.log(`Current status: ${status.type}`);
-            console.log(`Current status: ${status.hash.toString()}`);
+      })
+        .signAndSend(
+          account.address,
+          { signer: injector.signer },
+          async ({ status }) => {
+            if (status.isInBlock) {
+              console.log(
+                `Completed at block hash #${status.asInBlock.toString()}`
+              )
+            } else {
+              console.log(`Current status: ${status.type}`)
+              console.log(`Current status: ${status.hash.toString()}`)
+            }
           }
-        }
-      )
-      .catch((error: any) => {
-        console.log(":( transaction failed", error);
-      });
-
-
+        )
+        .catch((error: any) => {
+          console.log(':( transaction failed', error)
+        })
     }
   }
 
@@ -162,16 +160,16 @@ export default function Home() {
             {getContractResult && (
               <p>Get Contract result: {getContractResult}</p>
             )}
-            <button className={styles.rotatebutton} onClick={getResult}>
+            <button className={styles.rotatebutton} onClick={get}>
               get contract information
             </button>
             <p style={{ marginBottom: '20px' }}>Result: {bool.toString()}</p>
             <button
               className={styles.rotatebutton}
               style={{ marginBottom: '20px' }}
-              onClick={getResult2}
+              onClick={flip}
             >
-             aa
+              Flip
             </button>
           </div>
         </div>
