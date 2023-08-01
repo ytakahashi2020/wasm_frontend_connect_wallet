@@ -1,10 +1,12 @@
 'use client';
 
 import Head from 'next/head'
-import { Inter } from 'next/font/google'
+// import { Inter } from 'next/font/google'
 import styles from '../../styles/Home.module.css'
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { ContractPromise } from '@polkadot/api-contract';
+import { web3Accounts, web3Enable } from '@polkadot/extension-dapp';
+import { InjectedAccountWithMeta } from "@polkadot/extension-inject/types";
 import { BN, BN_ONE } from "@polkadot/util";
 import type { WeightV2 } from '@polkadot/types/interfaces'
 import '@polkadot/api-augment'
@@ -31,6 +33,34 @@ export default function Home() {
   const [bool, setBool] = useState<boolean | ''>('');
   const [contractAddress, setContractAddress] = useState('');
   const [getContractResult, setGetContractResult] = useState("");
+  const [address, setAddress] = useState("");
+  const [source, setSource] = useState("");
+  const [account, setAccount] = useState<InjectedAccountWithMeta | null>(null);
+  const [connected, setConnected] = useState(false);
+
+  async function connectWallet() {
+
+      const allInjected = await web3Enable("my dapp");
+
+      if (allInjected.length === 0) {
+        return;
+      }
+      const accounts = await web3Accounts();
+
+      const account = accounts[0];
+      setAccount(account);
+
+      const address = account?.address;
+      const source = account?.meta?.source;
+
+      console.log("address", address);
+      console.log("source", source);
+
+      setAddress(address);
+      setSource(source);
+      setConnected(true);
+
+  }
 
   async function getContract () {
     try{
@@ -86,7 +116,14 @@ if (humanOutput?.Ok !== undefined) {
       <main className={styles.main}>
         <h1 style={{marginBottom: "80px"}}>Get Your Contract Information(Flipper)</h1>
         <div className={styles.description}>
+
+          
+          
           <div>
+            <button className={styles.rotatebutton} style={{ marginBottom: '20px' }} onClick={connectWallet}>
+              {connected ? "Connected" : "Connect Wallet"}
+            </button>
+
             contractAddress:<input  style={{width: "400px"}} type="text" value={contractAddress} onChange={(e) => setContractAddress(e.target.value)} />
             <button className={styles.rotatebutton} onClick={getContract}>getContract</button>
 
